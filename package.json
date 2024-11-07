@@ -11,21 +11,21 @@
   "dependencies": {
     "axios": "^1.6.7",
     "jsdom": "^24.0.0",
-    "next": "14.1.0",
-    "react": "^18",
-    "react-dom": "^18"
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.6",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.4.17",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "latest",
     "eslint": "^8",
     "eslint-config-next": "14.1.0",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "postcss": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest"
   },
   "engines": {
     "node": ">=18.17.0"
