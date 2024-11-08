@@ -19,11 +19,6 @@ interface PriceData {
 
 interface Props {
   initialPortfolio: ETF[];
-  currentPrices?: {
-    prices: Record<string, PriceData>;
-    timestamp: string;
-    status: string;
-  };
 }
 
 const REBALANCING_THRESHOLD = 0.5; // 리밸런싱 오차 허용 범위 (%)
@@ -189,7 +184,7 @@ const parseFormattedNumber = (value: string) => {
   return Number(value.replace(/,/g, '')) || 0;
 };
 
-export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
+export default function Portfolio({ initialPortfolio }: Props) {
   const [etfList, setEtfList] = React.useState<ETF[]>(initialPortfolio);
   const [exchangeRate, setExchangeRate] = useState<number>(1300);
   const [cashBalance, setCashBalance] = useState<number>(0);
@@ -197,6 +192,15 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
   const [additionalCashType, setAdditionalCashType] = useState<'none' | 'percent' | 'fixed'>('none');
   const [additionalCashPercent, setAdditionalCashPercent] = useState<number>(5);
   const [additionalCashFixed, setAdditionalCashFixed] = useState<number>(0);
+  const [targetRatios, setTargetRatios] = useState<number[]>([80, 15, 5]);
+
+  const [currentPrices, setCurrentPrices] = useState<{
+    prices: Record<string, PriceData>;
+    timestamp: string;
+    status: string;
+  } | null>(null);
+
+  const [loadingTickers, setLoadingTickers] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch('/api/sheets/rate?from=USD&to=KRW')
@@ -209,18 +213,24 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
       .catch(error => console.error('환율 조회 실패:', error));
   }, []);
 
-  // ETF 가격 정보 가져오기
+  // 가격 데이터 가져오는 함수
+  const fetchPrices = async (tickers: string) => {
+    try {
+      const response = await fetch(`/api/sheets/price?tickers=${tickers}`);
+      const data = await response.json();
+      if (data.prices) {
+        setCurrentPrices(data);
+      }
+    } catch (error) {
+      console.error('가격 조회 실패:', error);
+    }
+  };
+
+  // 초기 가격 데이터 로드
   useEffect(() => {
     const tickers = etfList.map(etf => etf.ticker).join(',');
-    fetch(`/api/sheets/price?tickers=${tickers}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.prices) {
-          // currentPrices 상태 업데이트
-        }
-      })
-      .catch(error => console.error('가격 조회 실패:', error));
-  }, [etfList]); // etfList가 변경될 때마다 가격 정보 업데이트
+    fetchPrices(tickers);
+  }, [etfList]);
 
   const results = React.useMemo(() => {
     if (!currentPrices?.prices) return null;
@@ -247,11 +257,6 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
     );
   }, [etfList, currentPrices, cashBalance, exchangeRate, useAdditionalCash, additionalCashType, additionalCashPercent, additionalCashFixed]);
 
-  // 예수금 입력 핸들러
-  const handleCashBalanceChange = (value: string) => {
-    const numericValue = parseFormattedNumber(value);
-    setCashBalance(numericValue);
-  };
 
   if (!results) {
     return (
@@ -289,34 +294,41 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
               <tbody className="bg-white divide-y divide-gray-200">
                 {results.trades.map((trade, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <select
+                    <td className="px-4 py-3 flex items-center gap-2">
+                      <input
+                        type="text"
                         className="w-32 border rounded p-1"
-                        value={trade.ticker}
-                        onChange={(e) => {
+                        defaultValue={trade.ticker}
+                        onBlur={async (e) => {
+                          const ticker = e.target.value.toUpperCase();
+                          setLoadingTickers(prev => ({ ...prev, [ticker]: true }));
+                          
                           const newList = [...etfList];
-                          newList[index].ticker = e.target.value;
+                          newList[index].ticker = ticker;
                           setEtfList(newList);
+                          
+                          try {
+                            const tickers = newList.map(etf => etf.ticker).join(',');
+                            const response = await fetch(`/api/sheets/price?tickers=${tickers}`);
+                            const data = await response.json();
+                            if (data.prices) {
+                              setCurrentPrices(data);
+                            }
+                          } catch (error) {
+                            console.error('가격 조회 실패:', error);
+                          } finally {
+                            setLoadingTickers(prev => ({ ...prev, [ticker]: false }));
+                          }
                         }}
-                      >
-                        {popularETFs.map((etf) => (
-                          <option key={etf.ticker} value={etf.ticker}>
-                            {etf.ticker}
-                          </option>
-                        ))}
-                        <option value="custom">직접 입력</option>
-                      </select>
-                      {trade.ticker === 'custom' && (
-                        <input
-                          type="text"
-                          className="mt-1 w-32 border rounded p-1"
-                          placeholder="티커 입력"
-                          onChange={(e) => {
-                            const newList = [...etfList];
-                            newList[index].ticker = e.target.value.toUpperCase();
-                            setEtfList(newList);
-                          }}
-                        />
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        placeholder="티커 입력"
+                      />
+                      {loadingTickers[trade.ticker] && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -329,12 +341,42 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
                           newList[index].quantity = parseFormattedNumber(e.target.value);
                           setEtfList(newList);
                         }}
+                        onBlur={async () => {
+                          // 가격 데이터 새로 가져오기
+                          try {
+                            const tickers = etfList.map(etf => etf.ticker).join(',');
+                            const response = await fetch(`/api/sheets/price?tickers=${tickers}`);
+                            const data = await response.json();
+                            if (data.prices) {
+                              // currentPrices 상태 업데이트
+                            }
+                          } catch (error) {
+                            console.error('가격 조회 실패:', error);
+                          }
+                        }}
                         placeholder="수량"
                       />
                     </td>
                     <td className="px-4 py-3 text-right">${trade.price.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">{trade.currentWeight.toFixed(2)}%</td>
-                    <td className="px-4 py-3 text-right">{trade.targetWeight}%</td>
+                    <td className="px-4 py-3 text-right">
+                      <input
+                        type="text"
+                        className="w-20 text-right border rounded p-1"
+                        defaultValue={trade.targetWeight}
+                        onBlur={(e) => {
+                          const newRatios = [...TARGET_RATIOS];
+                          newRatios[index] = parseFloat(e.target.value) || TARGET_RATIOS[index];
+                          setTargetRatios(newRatios);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        placeholder="%"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded-full text-sm ${
                         trade.quantityDiff === 0 
@@ -363,34 +405,27 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
             {results.trades.map((trade, index) => (
               <div key={index} className="bg-white p-4 rounded-lg shadow-sm space-y-3">
                 <div className="flex justify-between items-center">
-                  <select
-                    className="w-32 border rounded p-1"
-                    value={trade.ticker}
-                    onChange={(e) => {
-                      const newList = [...etfList];
-                      newList[index].ticker = e.target.value;
-                      setEtfList(newList);
-                    }}
-                  >
-                    {popularETFs.map((etf) => (
-                      <option key={etf.ticker} value={etf.ticker}>
-                        {etf.ticker}
-                      </option>
-                    ))}
-                    <option value="custom">직접 입력</option>
-                  </select>
-                  {trade.ticker === 'custom' && (
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      className="w-24 text-right border rounded p-1"
-                      placeholder="티커 입력"
-                      onChange={(e) => {
+                      className="w-32 border rounded p-1"
+                      defaultValue={trade.ticker}
+                      onBlur={(e) => {
                         const newList = [...etfList];
                         newList[index].ticker = e.target.value.toUpperCase();
                         setEtfList(newList);
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      placeholder="티커 입력"
                     />
-                  )}
+                    {loadingTickers[trade.ticker] && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
+                    )}
+                  </div>
                   <input
                     type="text"
                     className="w-24 text-right border rounded p-1"
@@ -471,7 +506,12 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
               checked={useAdditionalCash}
               onChange={(e) => {
                 setUseAdditionalCash(e.target.checked);
-                if (!e.target.checked) setAdditionalCashType('none');
+                if (e.target.checked) {
+                  setAdditionalCashType('percent');
+                  setAdditionalCashPercent(10);
+                } else {
+                  setAdditionalCashType('none');
+                }
               }}
             />
             <label htmlFor="useAdditionalCash" className="ml-2 text-sm font-medium text-gray-700">

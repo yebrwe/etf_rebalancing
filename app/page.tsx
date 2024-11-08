@@ -50,7 +50,6 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <Portfolio 
           initialPortfolio={initialPortfolio}
-          currentPrices={currentPrices}
         />
       </div>
     </main>
