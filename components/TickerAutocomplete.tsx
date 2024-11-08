@@ -92,14 +92,16 @@ export default function TickerAutocomplete({
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value.toUpperCase();
     setQuery(newValue);
-    onChange(newValue);
-  }, [onChange]);
+  }, []);
 
   const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(false);
-    setIsOpen(false);
-    onBlur(e);
-  }, [onBlur]);
+    setTimeout(() => {
+      setIsFocused(false);
+      setIsOpen(false);
+      onChange(query);
+      onBlur(e);
+    }, 150);
+  }, [query, onChange, onBlur]);
 
   const handleSelect = useCallback((symbol: string) => {
     setQuery(symbol);
@@ -169,16 +171,10 @@ export default function TickerAutocomplete({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 모바일 환경 감지
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  );
-
   return (
     <div ref={wrapperRef} className="relative">
       <input
         type="text"
-        inputMode={isMobile ? "text" : undefined}
         value={query}
         onChange={handleInputChange}
         onFocus={() => {
@@ -188,9 +184,6 @@ export default function TickerAutocomplete({
         onBlur={handleInputBlur}
         placeholder={placeholder}
         className={`w-full border rounded p-2 ${className}`}
-        autoCapitalize="characters"
-        autoCorrect="off"
-        spellCheck="false"
       />
       
       {loading && (
