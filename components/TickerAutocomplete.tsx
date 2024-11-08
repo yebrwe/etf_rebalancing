@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -13,6 +13,7 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onSelect?: (value: string) => void;
   placeholder?: string;
   className?: string;
 }
@@ -43,6 +44,7 @@ export default function TickerAutocomplete({
   value,
   onChange,
   onBlur,
+  onSelect,
   placeholder = "티커 입력",
   className = ""
 }: Props) {
@@ -56,9 +58,65 @@ export default function TickerAutocomplete({
   
   const debouncedQuery = useDebounce(query, 300);
 
+  // value prop이 변경될 때만 query 상태 업데이트
   useEffect(() => {
-    setQuery(value);
+    if (value !== query) {
+      setQuery(value);
+    }
   }, [value]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value.toUpperCase();
+    setQuery(newValue);
+    // onChange는 부모 컴포넌트에 즉시 알리지 않음
+  }, []);
+
+  const handleSelect = useCallback((symbol: string) => {
+    setQuery(symbol);
+    setIsOpen(false);
+    setIsFocused(false);
+    
+    if (onSelect) {
+      onSelect(symbol);
+    } else {
+      onChange(symbol);
+    }
+  }, [onChange, onSelect]);
+
+  const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      setIsFocused(false);
+      setIsOpen(false);
+      onChange(query); // blur 시에만 부모 컴포넌트에 변경 알림
+      onBlur(e);
+    }, 150);
+  }, [query, onChange, onBlur]);
+
+  // 검색 로직을 useCallback으로 최적화
+  const searchTickers = useCallback(async () => {
+    if (!debouncedQuery || !isFocused) {
+      setResults([]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/yahoo/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const data = await response.json();
+      setResults(data.results || []);
+      setIsOpen(true);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedQuery, isFocused]);
+
+  // 검색 실행
+  useEffect(() => {
+    searchTickers();
+  }, [searchTickers]);
 
   // Portal 컨테이너 생성
   useEffect(() => {
@@ -106,6 +164,7 @@ export default function TickerAutocomplete({
     };
   }, [isOpen, portalContainer]);
 
+  // 외부 클릭 감지
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -116,50 +175,6 @@ export default function TickerAutocomplete({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const searchTickers = async () => {
-      if (!debouncedQuery || !isFocused) {
-        setResults([]);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/yahoo/search?q=${encodeURIComponent(debouncedQuery)}`);
-        const data = await response.json();
-        setResults(data.results || []);
-        setIsOpen(true);
-      } catch (error) {
-        console.error('Search failed:', error);
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    searchTickers();
-  }, [debouncedQuery, isFocused]);
-
-  const handleSelect = (symbol: string) => {
-    setQuery(symbol);
-    onChange(symbol);
-    setIsOpen(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value.toUpperCase();
-    setQuery(newValue);
-  };
-
-  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setIsFocused(false);
-    setTimeout(() => {
-      onChange(query);
-      onBlur(e);
-      setIsOpen(false);
-    }, 200);
-  };
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -188,8 +203,10 @@ export default function TickerAutocomplete({
             <button
               key={index}
               className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-              onClick={() => handleSelect(result.symbol)}
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => {
+                e.preventDefault(); // blur 이벤트 방지
+                handleSelect(result.symbol);
+              }}
             >
               <div className="flex justify-between items-center">
                 <span className="font-medium">
