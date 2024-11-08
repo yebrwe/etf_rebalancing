@@ -2,16 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { ETF, AdjustedTrade } from '@/types/portfolio';
 
 const popularETFs = [
-  { ticker: 'SCHD', name: '슈왑 배당 ETF', exchange: 'AMS' },
-  { ticker: 'QQQ', name: '나스닥 100 ETF', exchange: 'NAS' },
-  { ticker: 'TQQQ', name: '나스닥 100 3X ETF', exchange: 'NAS' },
+  { ticker: 'SCHD', name: 'SCHD' },
+  { ticker: 'QQQ', name: 'QQQ' },
+  { ticker: 'TQQQ', name: 'TQQQ' },
+  { ticker: 'VOO', name: 'VOO' },
+  { ticker: 'VTI', name: 'VTI' },
+  { ticker: 'JEPI', name: 'JEPI' },
+  { ticker: 'QYLD', name: 'QYLD' },
 ];
 
 interface PriceData {
   price: number;
   currency: string;
   timestamp: string;
-  exchange: string;
 }
 
 interface Props {
@@ -196,7 +199,7 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
   const [additionalCashFixed, setAdditionalCashFixed] = useState<number>(0);
 
   useEffect(() => {
-    fetch('/api/exchange/rate')
+    fetch('/api/sheets/rate?from=USD&to=KRW')
       .then(res => res.json())
       .then(data => {
         if (data.rate) {
@@ -206,6 +209,19 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
       .catch(error => console.error('환율 조회 실패:', error));
   }, []);
 
+  // ETF 가격 정보 가져오기
+  useEffect(() => {
+    const tickers = etfList.map(etf => etf.ticker).join(',');
+    fetch(`/api/sheets/price?tickers=${tickers}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.prices) {
+          // currentPrices 상태 업데이트
+        }
+      })
+      .catch(error => console.error('가격 조회 실패:', error));
+  }, [etfList]); // etfList가 변경될 때마다 가격 정보 업데이트
+
   const results = React.useMemo(() => {
     if (!currentPrices?.prices) return null;
 
@@ -214,7 +230,6 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
       if (additionalCashType === 'percent') {
         effectiveAdditionalCashRatio = additionalCashPercent / 100;
       } else if (additionalCashType === 'fixed') {
-        // 고정 금액을 비율로 변환
         const totalAssetKRW = etfList.reduce((sum, etf) => {
           return sum + etf.quantity * (currentPrices.prices[etf.ticker]?.price || 0) * exchangeRate;
         }, cashBalance);
@@ -232,65 +247,267 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
     );
   }, [etfList, currentPrices, cashBalance, exchangeRate, useAdditionalCash, additionalCashType, additionalCashPercent, additionalCashFixed]);
 
-  // 예수금 입력 핸들러 수정
+  // 예수금 입력 핸들러
   const handleCashBalanceChange = (value: string) => {
     const numericValue = parseFormattedNumber(value);
     setCashBalance(numericValue);
   };
 
-  return (
-    <div className="p-8 bg-white rounded-xl shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">ETF 포트폴리오 리밸런싱</h2>
-      <div className="mb-4 space-y-4">
+  if (!results) {
+    return (
+      <div className="max-w-7xl mx-auto p-4">
+        <p>로딩 중...</p>
+      </div>
+    );
+  }
 
-        <div className="space-y-2">
+  return (
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg">
+      <h2 className="text-xl sm:text-2xl font-bold mb-6 text-gray-800 border-b pb-4">ETF 포트폴리오 리밸런싱</h2>
+      
+      
+
+      {/* 리밸런싱 결과 영역 */}
+      {results && (
+        <>
+
+          {/* 리밸런싱 결과 - 모바일에서는 카드 형태로 표시 */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ETF</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">보유수량</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">현재가($)</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">현재 비중</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">목표 비중</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">필요 조정</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">조정 후 비중</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">평가금액</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {results.trades.map((trade, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <select
+                        className="w-32 border rounded p-1"
+                        value={trade.ticker}
+                        onChange={(e) => {
+                          const newList = [...etfList];
+                          newList[index].ticker = e.target.value;
+                          setEtfList(newList);
+                        }}
+                      >
+                        {popularETFs.map((etf) => (
+                          <option key={etf.ticker} value={etf.ticker}>
+                            {etf.ticker}
+                          </option>
+                        ))}
+                        <option value="custom">직접 입력</option>
+                      </select>
+                      {trade.ticker === 'custom' && (
+                        <input
+                          type="text"
+                          className="mt-1 w-32 border rounded p-1"
+                          placeholder="티커 입력"
+                          onChange={(e) => {
+                            const newList = [...etfList];
+                            newList[index].ticker = e.target.value.toUpperCase();
+                            setEtfList(newList);
+                          }}
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <input
+                        type="text"
+                        className="w-20 text-right border rounded p-1"
+                        value={trade.currentQuantity || ''}
+                        onChange={(e) => {
+                          const newList = [...etfList];
+                          newList[index].quantity = parseFormattedNumber(e.target.value);
+                          setEtfList(newList);
+                        }}
+                        placeholder="수량"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right">${trade.price.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right">{trade.currentWeight.toFixed(2)}%</td>
+                    <td className="px-4 py-3 text-right">{trade.targetWeight}%</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`px-2 py-1 rounded-full text-sm ${
+                        trade.quantityDiff === 0 
+                          ? 'bg-gray-100 text-gray-600' 
+                          : trade.quantityDiff > 0 
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                      }`}>
+                        {trade.quantityDiff === 0
+                          ? '조정 불필요'
+                          : `${Math.abs(trade.quantityDiff)}주 ${
+                              trade.quantityDiff > 0 ? '매수' : '매도'
+                            }`}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">{trade.newWeight.toFixed(2)}%</td>
+                    <td className="px-4 py-3 text-right">{Math.round(trade.newValue).toLocaleString()}원</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 모바일용 카드 뷰 */}
+          <div className="md:hidden space-y-4">
+            {results.trades.map((trade, index) => (
+              <div key={index} className="bg-white p-4 rounded-lg shadow-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <select
+                    className="w-32 border rounded p-1"
+                    value={trade.ticker}
+                    onChange={(e) => {
+                      const newList = [...etfList];
+                      newList[index].ticker = e.target.value;
+                      setEtfList(newList);
+                    }}
+                  >
+                    {popularETFs.map((etf) => (
+                      <option key={etf.ticker} value={etf.ticker}>
+                        {etf.ticker}
+                      </option>
+                    ))}
+                    <option value="custom">직접 입력</option>
+                  </select>
+                  {trade.ticker === 'custom' && (
+                    <input
+                      type="text"
+                      className="w-24 text-right border rounded p-1"
+                      placeholder="티커 입력"
+                      onChange={(e) => {
+                        const newList = [...etfList];
+                        newList[index].ticker = e.target.value.toUpperCase();
+                        setEtfList(newList);
+                      }}
+                    />
+                  )}
+                  <input
+                    type="text"
+                    className="w-24 text-right border rounded p-1"
+                    value={trade.currentQuantity || ''}
+                    onChange={(e) => {
+                      const newList = [...etfList];
+                      newList[index].quantity = parseFormattedNumber(e.target.value);
+                      setEtfList(newList);
+                    }}
+                    placeholder="수량"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>현재가: ${trade.price.toFixed(2)}</div>
+                  <div className="text-right">현재 비중: {trade.currentWeight.toFixed(2)}%</div>
+                  <div>목표 비중: {trade.targetWeight}%</div>
+                  <div className="text-right">조정 후: {trade.newWeight.toFixed(2)}%</div>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className={`px-2 py-1 rounded-full ${
+                    trade.quantityDiff === 0 
+                      ? 'bg-gray-100 text-gray-600' 
+                      : trade.quantityDiff > 0 
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                  }`}>
+                    {trade.quantityDiff === 0
+                      ? '조정 불필요'
+                      : `${Math.abs(trade.quantityDiff)}주 ${
+                          trade.quantityDiff > 0 ? '매수' : '매도'
+                        }`}
+                  </span>
+                  <span>{Math.round(trade.newValue).toLocaleString()}원</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 요약 보 */}
+          <div className="mt-6 bg-white p-4 rounded-lg shadow-sm space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">총 포트리오 가치</p>
+                <p className="text-lg font-medium">
+                    {Math.round(results.totalAssetValueKRW).toLocaleString()}원
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">남은 예수금</p>
+                <p className="text-lg font-medium">
+                  {Math.round(results.remainingCash).toLocaleString()}원
+                </p>
+              </div>
+              {useAdditionalCash && (
+                <div>
+                  <p className="text-sm text-gray-600">추가 예수금</p>
+                  <p className="text-lg font-medium text-blue-600">
+                    {additionalCashType === 'percent' 
+                      ? `${additionalCashPercent}% (${Math.round(results.totalAssetValueKRW * (additionalCashPercent / 100)).toLocaleString()}원)`
+                      : `${Math.round(additionalCashFixed).toLocaleString()}원`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          
+        </>
+      )}
+      {/* 추가 예수금 설정 영역 */}
+      <div className="mb-6 space-y-4 bg-white p-4 rounded-lg shadow-sm">
+        <div className="space-y-3">
           <div className="flex items-center">
             <input
               type="checkbox"
               id="useAdditionalCash"
-              className="mr-2"
+              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
               checked={useAdditionalCash}
               onChange={(e) => {
                 setUseAdditionalCash(e.target.checked);
-                if (!e.target.checked) {
-                  setAdditionalCashType('none');
-                }
+                if (!e.target.checked) setAdditionalCashType('none');
               }}
             />
-            <label htmlFor="useAdditionalCash" className="text-sm text-gray-700">
+            <label htmlFor="useAdditionalCash" className="ml-2 text-sm font-medium text-gray-700">
               추가 예수금 사용
             </label>
           </div>
 
           {useAdditionalCash && (
-            <div className="ml-6 space-y-2">
-              <div className="flex items-center space-x-4">
+            <div className="ml-6 space-y-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex flex-wrap gap-4">
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
-                    className="form-radio"
+                    className="w-4 h-4 text-blue-600"
                     name="additionalCashType"
                     checked={additionalCashType === 'percent'}
                     onChange={() => setAdditionalCashType('percent')}
                   />
-                  <span className="ml-2">비율로 설정</span>
+                  <span className="ml-2 text-sm">비율로 설정</span>
                 </label>
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
-                    className="form-radio"
+                    className="w-4 h-4 text-blue-600"
                     name="additionalCashType"
                     checked={additionalCashType === 'fixed'}
                     onChange={() => setAdditionalCashType('fixed')}
                   />
-                  <span className="ml-2">금액으로 설정</span>
+                  <span className="ml-2 text-sm">금액으로 설정</span>
                 </label>
               </div>
 
               {additionalCashType === 'percent' && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <select
-                    className="form-select border rounded p-1"
+                    className="form-select rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     value={additionalCashPercent}
                     onChange={(e) => setAdditionalCashPercent(Number(e.target.value))}
                   >
@@ -299,122 +516,26 @@ export default function Portfolio({ initialPortfolio, currentPrices }: Props) {
                     <option value={15}>15%</option>
                     <option value={20}>20%</option>
                   </select>
-                  <span>총 자산 대비</span>
+                  <span className="text-sm text-gray-600">총 자산 대비</span>
                 </div>
               )}
 
               {additionalCashType === 'fixed' && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    className="form-input border rounded p-1"
+                    className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={formatNumber(additionalCashFixed)}
                     onChange={(e) => setAdditionalCashFixed(parseFormattedNumber(e.target.value))}
                     placeholder="추가 예수금 입력"
                   />
-                  <span>원</span>
+                  <span className="text-sm text-gray-600">원</span>
                 </div>
               )}
             </div>
           )}
         </div>
       </div>
-
-      {results && (
-        <>
-          <div>총 포트폴리오 가치: ${results.totalAssetValue.toLocaleString()}</div>
-          <div>≈ {Math.round(results.totalAssetValueKRW).toLocaleString()}원 (1$ = {Math.round(exchangeRate).toLocaleString()}원)</div>
-          
-          {!results.needsRebalancing ? (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-semibold text-green-800">
-                현재 포트폴리오의 비중이 목표 비중과 충분히 근접하여 리밸런싱이 불필요합니다.
-                (최대 오차: {results.maxWeightDiff.toFixed(2)}%)
-              </p>
-            </div>
-          ) : results.additionalCashNeeded > 0 ? (
-            <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-700">추가 필요 예수금: {Math.round(results.additionalCashNeeded).toLocaleString()}원</p>
-            </div>
-          ) : (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="font-semibold text-green-800">
-                현재 예수금으로 리밸런싱 실행 가능
-              </p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* 리밸런싱 결과 테이블 */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="px-4 py-3 text-left">ETF</th>
-              <th className="px-4 py-3 text-right">보유수량</th>
-              <th className="px-4 py-3 text-right">현재가($)</th>
-              <th className="px-4 py-3 text-right">현재 비중</th>
-              <th className="px-4 py-3 text-right">목표 비중</th>
-              <th className="px-4 py-3 text-right">필요 조정</th>
-              <th className="px-4 py-3 text-right">조정 후 비중</th>
-              <th className="px-4 py-3 text-right">평가금액($)</th>
-              <th className="px-4 py-3 text-right">평가금액(원)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {results?.trades.map((trade, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-4 py-3">{trade.ticker}</td>
-                <td className="px-4 py-3 text-right">
-                  <input
-                    type="text"
-                    className="w-20 text-right border rounded"
-                    value={trade.currentQuantity}
-                    onChange={(e) => {
-                      const newList = [...etfList];
-                      newList[index].quantity = parseFormattedNumber(e.target.value);
-                      setEtfList(newList);
-                    }}
-                  />
-                </td>
-                <td className="px-4 py-3 text-right">${trade.price.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right">{trade.currentWeight.toFixed(2)}%</td>
-                <td className="px-4 py-3 text-right">{trade.targetWeight}%</td>
-                <td className="px-4 py-3 text-right">
-                  {trade.quantityDiff === 0
-                    ? '조정 불필요'
-                    : `${Math.abs(trade.quantityDiff)}주 ${
-                        trade.quantityDiff > 0 ? '매수' : '매도'
-                      }`}
-                </td>
-                <td className="px-4 py-3 text-right">{trade.newWeight.toFixed(2)}%</td>
-                <td className="px-4 py-3 text-right">${(trade.newValue / exchangeRate).toLocaleString()}</td>
-                <td className="px-4 py-3 text-right">{Math.round(trade.newValue).toLocaleString()}원</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* 리밸런싱 요약 정보 */}
-      {results && (
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p>총 자산: {Math.round(results.totalAssetValueKRW).toLocaleString()}원</p>
-              <p>남은 예수금: {Math.round(results.remainingCash).toLocaleString()}원</p>
-              {useAdditionalCash && (
-                <p className="text-blue-600">
-                  {additionalCashType === 'percent' 
-                    ? `추가 예수금 (${additionalCashPercent}%): ${Math.round(results.totalAssetValueKRW * (additionalCashPercent / 100)).toLocaleString()}원`
-                    : `추가 예수금: ${Math.round(additionalCashFixed).toLocaleString()}원`}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 
