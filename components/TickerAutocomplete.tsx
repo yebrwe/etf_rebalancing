@@ -60,37 +60,8 @@ export default function TickerAutocomplete({
 
   // value prop이 변경될 때만 query 상태 업데이트
   useEffect(() => {
-    if (value !== query) {
-      setQuery(value);
-    }
-  }, [value, query]);
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value.toUpperCase();
-    setQuery(newValue);
-    // onChange는 부모 컴포넌트에 즉시 알리지 않음
-  }, []);
-
-  const handleSelect = useCallback((symbol: string) => {
-    setQuery(symbol);
-    setIsOpen(false);
-    setIsFocused(false);
-    
-    if (onSelect) {
-      onSelect(symbol);
-    } else {
-      onChange(symbol);
-    }
-  }, [onChange, onSelect]);
-
-  const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    setTimeout(() => {
-      setIsFocused(false);
-      setIsOpen(false);
-      onChange(query); // blur 시에만 부모 컴포넌트에 변경 알림
-      onBlur(e);
-    }, 150);
-  }, [query, onChange, onBlur]);
+    setQuery(value);
+  }, [value]);
 
   // 검색 로직을 useCallback으로 최적화
   const searchTickers = useCallback(async () => {
@@ -117,6 +88,30 @@ export default function TickerAutocomplete({
   useEffect(() => {
     searchTickers();
   }, [searchTickers]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value.toUpperCase();
+    setQuery(newValue);
+  }, []);
+
+  const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      setIsFocused(false);
+      setIsOpen(false);
+      onChange(query);
+      onBlur(e);
+    }, 150);
+  }, [query, onChange, onBlur]);
+
+  const handleSelect = useCallback((symbol: string) => {
+    setQuery(symbol);
+    setIsOpen(false);
+    setIsFocused(false);
+    onChange(symbol);
+    if (onSelect) {
+      onSelect(symbol);
+    }
+  }, [onChange, onSelect]);
 
   // Portal 컨테이너 생성
   useEffect(() => {

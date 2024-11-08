@@ -143,7 +143,7 @@ const calculateRebalanceScenario = (
   // 모든 ETF의 비중 차이가 0.5% 미만인지 확인
   const needsRebalancing = currentWeights.some(diff => diff >= REBALANCING_THRESHOLD);
 
-  // 리밸런싱이 불필요한 경우 현재 태 그대로 반환
+  // 리밸런싱이 불필요한 경우 현재  그대로 반환
   if (!needsRebalancing) {
     const trades = portfolio.map((etf, index) => {
       const price = prices[etf.ticker]?.price || 0;
@@ -270,12 +270,20 @@ const ETFRow = memo(function ETFRow({
   etfList: ETF[];
   setEtfList: (etfs: ETF[]) => void;
   TARGET_RATIOS: number[];
-  setTargetRatios: (ratios: number[]) => void;
+  setTargetRatios: React.Dispatch<React.SetStateAction<number[]>>;
   parseFormattedNumber: (value: string) => number;
   onRemoveETF: (index: number) => void;
   onTickerChange: (index: number, value: string) => void;
   onTickerBlur: (index: number, value: string) => void;
 }) {
+  // 로컬 상태 추가
+  const [ratioInput, setRatioInput] = useState(TARGET_RATIOS[index]?.toString() || '');
+
+  // TARGET_RATIOS가 변경될 때 로컬 상태 업데이트
+  useEffect(() => {
+    setRatioInput(TARGET_RATIOS[index]?.toString() || '');
+  }, [TARGET_RATIOS, index]);
+
   const handleTickerChange = useCallback((value: string) => {
     onTickerChange(index, value);
   }, [index, onTickerChange]);
@@ -291,11 +299,31 @@ const ETFRow = memo(function ETFRow({
   }, [etfList, index, setEtfList, parseFormattedNumber]);
 
   const handleRatioChange = useCallback((value: string) => {
-    const newRatios = [...TARGET_RATIOS];
-    const parsedValue = parseFloat(value);
-    newRatios[index] = isNaN(parsedValue) ? 0 : parsedValue;
-    setTargetRatios(newRatios);
-  }, [TARGET_RATIOS, index, setTargetRatios]);
+    setRatioInput(value); // 로컬 상태 업데이트
+
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      const parsedValue = parseFloat(value);
+      const newValue = isNaN(parsedValue) ? 0 : Math.min(100, Math.max(0, parsedValue));
+      
+      setTargetRatios(prev => {
+        const newRatios = [...prev];
+        newRatios[index] = newValue;
+        return newRatios;
+      });
+    }
+  }, [index, setTargetRatios]);
+
+  const handleRatioBlur = useCallback(() => {
+    const value = ratioInput;
+    if (value === '') {
+      handleRatioChange('0');
+    } else {
+      const parsedValue = parseFloat(value);
+      if (!isNaN(parsedValue)) {
+        handleRatioChange(parsedValue.toString());
+      }
+    }
+  }, [ratioInput, handleRatioChange]);
 
   return (
     <tr className="hover:bg-gray-50">
@@ -327,14 +355,12 @@ const ETFRow = memo(function ETFRow({
       </td>
       <td className="px-4 py-3 text-right">
         <input
-          type="number"
+          type="text"
           className="w-20 text-right border rounded p-1"
-          value={TARGET_RATIOS[index] || 0}
+          value={ratioInput}
           onChange={(e) => handleRatioChange(e.target.value)}
+          onBlur={handleRatioBlur}
           placeholder="비중"
-          min="0"
-          max="100"
-          step="0.1"
         />
       </td>
       <td className="px-4 py-3 text-right">
