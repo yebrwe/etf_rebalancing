@@ -217,7 +217,7 @@ const calculateRebalanceScenario = (
   const maxWeightDiff = Math.max(...weightDiffs);
   const totalWeightDiff = weightDiffs.reduce((sum, diff) => sum + diff, 0);
 
-  // 6. 필요한  계 (원화)
+  // 6. 필요한  계 (화)
   const totalBuyValueKRW = trades.reduce((sum, trade) => 
     trade.quantityDiff > 0 ? sum + (trade.quantityDiff * trade.price * exchangeRate) : sum
   , 0);
@@ -326,58 +326,62 @@ const ETFRow = memo(function ETFRow({
   }, [ratioInput, handleRatioChange]);
 
   return (
-    <tr className="hover:bg-gray-50">
-      <td className="px-4 py-3">
+    <tr className="hover:bg-gray-50 transition-colors duration-150">
+      <td className="px-6 py-4 whitespace-nowrap">
         <TickerInput
           ticker={trade.ticker}
           onTickerChange={handleTickerChange}
           onTickerBlur={handleTickerBlur}
-          className="w-32"
+          className="w-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-6 py-4 whitespace-nowrap text-right">
         <input
           type="text"
-          className="w-20 text-right border rounded p-1"
+          className="w-24 text-right border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={formatNumber(trade.currentQuantity)}
           onChange={(e) => handleQuantityChange(e.target.value)}
           placeholder="수량"
         />
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-900">
         ${formatNumber(trade.price)}
       </td>
-      <td className="px-4 py-3 text-right">
-        ₩{formatNumber(Math.round(trade.currentValue))}
+      <td className="px-6 py-4 whitespace-nowrap text-right text-gray-900">
+        {formatNumber(Math.round(trade.currentValue))}원
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-6 py-4 whitespace-nowrap text-right text-gray-900">
         {trade.currentWeight.toFixed(1)}%
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-6 py-4 whitespace-nowrap text-right">
         <input
           type="text"
-          className="w-20 text-right border rounded p-1"
+          className="w-24 text-right border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={ratioInput}
           onChange={(e) => handleRatioChange(e.target.value)}
           onBlur={handleRatioBlur}
           placeholder="비중"
         />
       </td>
-      <td className="px-4 py-3 text-right">
-        <span className={trade.quantityDiff > 0 ? 'text-green-600' : trade.quantityDiff < 0 ? 'text-red-600' : ''}>
+      <td className="px-6 py-4 whitespace-nowrap text-right">
+        <span className={`font-medium ${
+          trade.quantityDiff > 0 ? 'text-green-600' : 
+          trade.quantityDiff < 0 ? 'text-red-600' : 
+          'text-gray-900'
+        }`}>
           {trade.quantityDiff > 0 ? '+' : ''}{formatNumber(trade.quantityDiff)}
         </span>
       </td>
-      <td className="px-4 py-3 text-right">
-        ₩{formatNumber(Math.round(trade.newValue))}
+      <td className="px-6 py-4 whitespace-nowrap text-right text-gray-900">
+        {formatNumber(Math.round(trade.newValue))}원
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-6 py-4 whitespace-nowrap text-right text-gray-900">
         {trade.newWeight.toFixed(1)}%
       </td>
-      <td className="px-4 py-3">
+      <td className="px-6 py-4 whitespace-nowrap text-right">
         <button
           onClick={() => onRemoveETF(index)}
-          className="text-red-500 hover:text-red-700"
+          className="text-red-500 hover:text-red-700 transition-colors duration-150"
         >
           삭제
         </button>
@@ -409,27 +413,26 @@ const TableComponent = memo(function TableComponent({
   onTickerChange, 
   onTickerBlur 
 }: TableComponentProps) {
-  // trades 배열이 변경될 때만 리렌더링
   const memoizedTrades = useMemo(() => trades, [trades]);
 
   return (
-    <div className="hidden md:block overflow-x-auto">
-      <table className="w-full">
-        <thead>
+    <div className="hidden md:block overflow-x-auto rounded-lg border border-gray-200 shadow bg-white">
+      <table className="w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left">티커</th>
-            <th className="px-4 py-3 text-right">수량</th>
-            <th className="px-4 py-3 text-right">현재가</th>
-            <th className="px-4 py-3 text-right">평가금액</th>
-            <th className="px-4 py-3 text-right">현재비중</th>
-            <th className="px-4 py-3 text-right">목표비중</th>
-            <th className="px-4 py-3 text-right">조정수량</th>
-            <th className="px-4 py-3 text-right">조정후금액</th>
-            <th className="px-4 py-3 text-right">조정후비중</th>
-            <th className="px-4 py-3"></th>
+            <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">티커</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">수량</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">현재가</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">평가금액</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">현재비중</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">목표비중</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">조정수량</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">조정후금액</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">조정후비중</th>
+            <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white divide-y divide-gray-200">
           {memoizedTrades.map((trade, index) => (
             <ETFRow
               key={`${trade.ticker}-${index}`}
@@ -448,15 +451,6 @@ const TableComponent = memo(function TableComponent({
         </tbody>
       </table>
     </div>
-  );
-}, (prevProps, nextProps) => {
-  // trades 배열의 길이가 같고 내용이 같으면 리렌더링하지 않음
-  return (
-    prevProps.trades.length === nextProps.trades.length &&
-    prevProps.trades.every((trade, index) => 
-      trade.ticker === nextProps.trades[index].ticker &&
-      trade.currentQuantity === nextProps.trades[index].currentQuantity
-    )
   );
 });
 
