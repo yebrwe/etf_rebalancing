@@ -63,7 +63,7 @@ export default function TickerAutocomplete({
     if (value !== query) {
       setQuery(value);
     }
-  }, [value]);
+  }, [value, query]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value.toUpperCase();
