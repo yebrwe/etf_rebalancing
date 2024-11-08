@@ -200,8 +200,6 @@ export default function Portfolio({ initialPortfolio }: Props) {
     status: string;
   } | null>(null);
 
-  const [loadingTickers, setLoadingTickers] = useState<Record<string, boolean>>({});
-
   useEffect(() => {
     // 환율 조회를 야후 API로 변경
     fetch('/api/yahoo/rate?from=USD&to=KRW')
@@ -217,15 +215,6 @@ export default function Portfolio({ initialPortfolio }: Props) {
   // 가격 데이터 가져오는 함수
   const fetchPrices = async (tickers: string) => {
     try {
-      setLoadingTickers(prev => {
-        const newLoadingState: Record<string, boolean> = {};
-        tickers.split(',').forEach(ticker => {
-          newLoadingState[ticker.trim()] = true;
-        });
-        return { ...prev, ...newLoadingState };
-      });
-
-      // 야후 API로 변경
       const response = await fetch(`/api/yahoo/price?tickers=${tickers}`);
       const data = await response.json();
       
@@ -234,14 +223,6 @@ export default function Portfolio({ initialPortfolio }: Props) {
       }
     } catch (error) {
       console.error('가격 조회 실패:', error);
-    } finally {
-      setLoadingTickers(prev => {
-        const newLoadingState: Record<string, boolean> = {};
-        tickers.split(',').forEach(ticker => {
-          newLoadingState[ticker.trim()] = false;
-        });
-        return { ...prev, ...newLoadingState };
-      });
     }
   };
 
@@ -324,7 +305,6 @@ export default function Portfolio({ initialPortfolio }: Props) {
                           newList[index].ticker = ticker;
                           setEtfList(newList);
                           
-                          // 모든 ETF의 가격을 한번에 조회
                           const tickers = newList.map(etf => etf.ticker).join(',');
                           await fetchPrices(tickers);
                         }}
@@ -335,9 +315,6 @@ export default function Portfolio({ initialPortfolio }: Props) {
                         }}
                         placeholder="티커 입력"
                       />
-                      {loadingTickers[trade.ticker] && (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
-                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <input
@@ -421,9 +398,6 @@ export default function Portfolio({ initialPortfolio }: Props) {
                       }}
                       placeholder="티커 입력"
                     />
-                    {loadingTickers[trade.ticker] && (
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
-                    )}
                   </div>
                   <input
                     type="text"
