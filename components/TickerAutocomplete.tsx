@@ -96,22 +96,20 @@ export default function TickerAutocomplete({
   }, [onChange]);
 
   const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    setTimeout(() => {
-      setIsFocused(false);
-      setIsOpen(false);
-      const finalValue = query.toUpperCase();
-      onChange(finalValue);
-      onBlur(e);
-    }, 50);
-  }, [query, onChange, onBlur]);
+    setIsFocused(false);
+    setIsOpen(false);
+    onBlur(e);
+  }, [onBlur]);
 
   const handleSelect = useCallback((symbol: string) => {
-    const upperSymbol = symbol.toUpperCase();
-    setQuery(upperSymbol);
+    setQuery(symbol);
     setIsOpen(false);
     setIsFocused(false);
-    onChange(upperSymbol);
-  }, [onChange]);
+    onChange(symbol);
+    if (onSelect) {
+      onSelect(symbol);
+    }
+  }, [onChange, onSelect]);
 
   // Portal 컨테이너 생성
   useEffect(() => {
@@ -180,7 +178,7 @@ export default function TickerAutocomplete({
     <div ref={wrapperRef} className="relative">
       <input
         type="text"
-        inputMode="text"
+        inputMode={isMobile ? "text" : undefined}
         value={query}
         onChange={handleInputChange}
         onFocus={() => {
@@ -193,8 +191,6 @@ export default function TickerAutocomplete({
         autoCapitalize="characters"
         autoCorrect="off"
         spellCheck="false"
-        autoComplete="off"
-        enterKeyHint="done"
       />
       
       {loading && (
