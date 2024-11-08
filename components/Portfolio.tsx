@@ -203,7 +203,8 @@ export default function Portfolio({ initialPortfolio }: Props) {
   const [loadingTickers, setLoadingTickers] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetch('/api/sheets/rate?from=USD&to=KRW')
+    // 환율 조회를 야후 API로 변경
+    fetch('/api/yahoo/rate?from=USD&to=KRW')
       .then(res => res.json())
       .then(data => {
         if (data.rate) {
@@ -216,13 +217,31 @@ export default function Portfolio({ initialPortfolio }: Props) {
   // 가격 데이터 가져오는 함수
   const fetchPrices = async (tickers: string) => {
     try {
-      const response = await fetch(`/api/sheets/price?tickers=${tickers}`);
+      setLoadingTickers(prev => {
+        const newLoadingState: Record<string, boolean> = {};
+        tickers.split(',').forEach(ticker => {
+          newLoadingState[ticker.trim()] = true;
+        });
+        return { ...prev, ...newLoadingState };
+      });
+
+      // 야후 API로 변경
+      const response = await fetch(`/api/yahoo/price?tickers=${tickers}`);
       const data = await response.json();
+      
       if (data.prices) {
         setCurrentPrices(data);
       }
     } catch (error) {
       console.error('가격 조회 실패:', error);
+    } finally {
+      setLoadingTickers(prev => {
+        const newLoadingState: Record<string, boolean> = {};
+        tickers.split(',').forEach(ticker => {
+          newLoadingState[ticker.trim()] = false;
+        });
+        return { ...prev, ...newLoadingState };
+      });
     }
   };
 
@@ -301,24 +320,13 @@ export default function Portfolio({ initialPortfolio }: Props) {
                         defaultValue={trade.ticker}
                         onBlur={async (e) => {
                           const ticker = e.target.value.toUpperCase();
-                          setLoadingTickers(prev => ({ ...prev, [ticker]: true }));
-                          
                           const newList = [...etfList];
                           newList[index].ticker = ticker;
                           setEtfList(newList);
                           
-                          try {
-                            const tickers = newList.map(etf => etf.ticker).join(',');
-                            const response = await fetch(`/api/sheets/price?tickers=${tickers}`);
-                            const data = await response.json();
-                            if (data.prices) {
-                              setCurrentPrices(data);
-                            }
-                          } catch (error) {
-                            console.error('가격 조회 실패:', error);
-                          } finally {
-                            setLoadingTickers(prev => ({ ...prev, [ticker]: false }));
-                          }
+                          // 모든 ETF의 가격을 한번에 조회
+                          const tickers = newList.map(etf => etf.ticker).join(',');
+                          await fetchPrices(tickers);
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -342,17 +350,8 @@ export default function Portfolio({ initialPortfolio }: Props) {
                           setEtfList(newList);
                         }}
                         onBlur={async () => {
-                          // 가격 데이터 새로 가져오기
-                          try {
-                            const tickers = etfList.map(etf => etf.ticker).join(',');
-                            const response = await fetch(`/api/sheets/price?tickers=${tickers}`);
-                            const data = await response.json();
-                            if (data.prices) {
-                              // currentPrices 상태 업데이트
-                            }
-                          } catch (error) {
-                            console.error('가격 조회 실패:', error);
-                          }
+                          const tickers = etfList.map(etf => etf.ticker).join(',');
+                          await fetchPrices(tickers);
                         }}
                         placeholder="수량"
                       />
