@@ -217,7 +217,7 @@ const calculateRebalanceScenario = (
   const maxWeightDiff = Math.max(...weightDiffs);
   const totalWeightDiff = weightDiffs.reduce((sum, diff) => sum + diff, 0);
 
-  // 6. 필요한  계 (화)
+  // 6. 필요한  계 (��)
   const totalBuyValueKRW = trades.reduce((sum, trade) => 
     trade.quantityDiff > 0 ? sum + (trade.quantityDiff * trade.price * exchangeRate) : sum
   , 0);
@@ -390,13 +390,13 @@ const ETFRow = memo(function ETFRow({
   );
 });
 
-// TableComponent의 Props 타입 정의
+// TableComponent의 Props 타입 수정
 interface TableComponentProps {
   trades: Trade[];
   etfList: ETF[];
   setEtfList: (etfs: ETF[]) => void;
   targetRatios: number[];
-  setTargetRatios: (ratios: number[]) => void;
+  setTargetRatios: React.Dispatch<React.SetStateAction<number[]>>;
   onRemoveETF: (index: number) => void;
   onTickerChange: (index: number, value: string) => void;
   onTickerBlur: (index: number, value: string) => void;
