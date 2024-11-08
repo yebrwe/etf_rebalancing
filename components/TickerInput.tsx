@@ -14,20 +14,24 @@ const TickerInput = memo(function TickerInput({
   onTickerBlur,
   className
 }: Props) {
-  // 선택 핸들러 수정
-  const handleSelect = useCallback((selectedValue: string) => {
-    onTickerChange(selectedValue);
-    // 가짜 input 엘리먼트 생성
+  const handleChange = useCallback((value: string) => {
+    onTickerChange(value.toUpperCase());
+  }, [onTickerChange]);
+
+  const handleSelect = useCallback((value: string) => {
+    const upperValue = value.toUpperCase();
+    onTickerChange(upperValue);
     const input = document.createElement('input');
+    input.value = upperValue;
     const event = new FocusEvent('blur', { relatedTarget: input }) as unknown as React.FocusEvent<HTMLInputElement>;
-    Object.defineProperty(event, 'target', { value: { value: selectedValue } });
+    Object.defineProperty(event, 'target', { writable: true, value: input });
     onTickerBlur(event);
   }, [onTickerChange, onTickerBlur]);
 
   return (
     <TickerAutocomplete
       value={ticker}
-      onChange={onTickerChange}
+      onChange={handleChange}
       onBlur={onTickerBlur}
       onSelect={handleSelect}
       className={className}

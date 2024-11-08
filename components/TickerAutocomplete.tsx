@@ -92,26 +92,36 @@ export default function TickerAutocomplete({
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value.toUpperCase();
     setQuery(newValue);
-  }, []);
+    onChange(newValue);
+  }, [onChange]);
 
   const handleInputBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
     setTimeout(() => {
       setIsFocused(false);
       setIsOpen(false);
-      onChange(query);
       onBlur(e);
     }, 150);
-  }, [query, onChange, onBlur]);
+  }, [onBlur]);
 
   const handleSelect = useCallback((symbol: string) => {
-    setQuery(symbol);
+    const upperSymbol = symbol.toUpperCase();
+    setQuery(upperSymbol);
     setIsOpen(false);
     setIsFocused(false);
-    onChange(symbol);
+    onChange(upperSymbol);
+    
+    // 선택 시 onSelect 콜백 호출
     if (onSelect) {
-      onSelect(symbol);
+      onSelect(upperSymbol);
     }
-  }, [onChange, onSelect]);
+
+    // blur 이벤트 시뮬레이션
+    const input = document.createElement('input');
+    input.value = upperSymbol;
+    const event = new FocusEvent('blur', { relatedTarget: input }) as unknown as React.FocusEvent<HTMLInputElement>;
+    Object.defineProperty(event, 'target', { writable: true, value: input });
+    onBlur(event);
+  }, [onChange, onBlur, onSelect]);
 
   // Portal 컨테이너 생성
   useEffect(() => {
