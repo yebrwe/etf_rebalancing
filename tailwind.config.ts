@@ -7,7 +7,20 @@ const config: Config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      ringWidth: {
+        'focus': '3px',
+      },
+      ringColor: {
+        'focus-light': 'rgba(59, 130, 246, 0.5)',
+      },
+      ringOffsetWidth: {
+        'focus': '2px',
+      },
+      transitionProperty: {
+        'focus': 'outline, outline-offset, ring, ring-offset',
+      },
+    },
   },
   plugins: [],
 }

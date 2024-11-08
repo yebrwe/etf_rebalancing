@@ -1,43 +1,34 @@
 export interface ETF {
   ticker: string;
   quantity: number;
-  targetWeight: number;
 }
 
-export interface AdjustedTrade extends ETF {
-  currentValue: number;
-  currentWeight: number;
-  weightDiff: number;
-  pricePer: number;
-  exchange: string;
-  isWithinThreshold: boolean;
-  targetValue: number;
-  valueDiff: number;
-  quantityDiff: number;
-  newQuantity: number;
-  newValue: number;
-  newWeight: number;
-  weightDiffAfterTrade: number;
-  adjustmentReason: string;
+export interface PriceData {
+  price: number;
+  currency: string;
+  timestamp: string;
 }
 
-export interface OutOfRangeETF {
+export interface Trade {
   ticker: string;
+  currentQuantity: number;
+  newQuantity: number;
+  quantityDiff: number;
+  currentValue: number;
+  newValue: number;
+  currentWeight: number;
+  newWeight: number;
   targetWeight: number;
-  finalWeight: number;
-  difference: number;
+  price: number;
 }
 
-export interface RebalanceResults {
-  totalValueUSD: number;
-  totalValueKRW: number;
-  remainingCash: number;
+export interface RebalanceScenario {
+  trades: Trade[];
+  totalAssetValue: number;
+  totalAssetValueKRW: number;
   additionalCashNeeded: number;
-  items: AdjustedTrade[];
-  rebalancingPossible: boolean;
-  totalBuyNeeded: number;
-  availableCash: number;
-  outOfRangeETFs: OutOfRangeETF[];
-  cashBalance: number;
-  totalSellValue: number;
+  remainingCash: number;
+  maxWeightDiff: number;
+  totalWeightDiff: number;
+  needsRebalancing: boolean;
 } 

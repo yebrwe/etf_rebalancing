@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* 기본 포커스 스타일 */
+  :focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  /* 키보드 네비게이션 포커스 표시기 */
+  :focus:not(:focus-visible) {
+    @apply outline-none ring-0;
+  }
+
+  /* 스킵 링크 */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:top-0 focus:left-0 focus:z-50
+           focus:p-4 focus:bg-white focus:text-blue-600;
+  }
+
+  /* 접근성 개선된 버튼 스타일 */
+  button, [role="button"] {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+  }
+
+  /* 접근성 개선된 입력 필드 스타일 */
+  input, select, textarea {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+
+  /* 접근성 개선된 링크 스타일 */
+  a {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+  }
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-rgb: 255, 255, 255;
