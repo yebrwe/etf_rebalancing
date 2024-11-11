@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: 'google-site-verification=MMVpVpkE19QLCYuUdb8nJFanMc_wocirgio_xJyqSBY',
+    google: 'MMVpVpkE19QLCYuUdb8nJFanMc_wocirgio_xJyqSBY',
   },
   alternates: {
     canonical: 'https://etf-rebalancing.com'
