@@ -217,7 +217,7 @@ const calculateRebalanceScenario = (
   const maxWeightDiff = Math.max(...weightDiffs);
   const totalWeightDiff = weightDiffs.reduce((sum, diff) => sum + diff, 0);
 
-  // 6. 필요한  계 (��)
+  // 6. 필요한  계 ()
   const totalBuyValueKRW = trades.reduce((sum, trade) => 
     trade.quantityDiff > 0 ? sum + (trade.quantityDiff * trade.price * exchangeRate) : sum
   , 0);
@@ -514,6 +514,31 @@ export default function Portfolio({ initialPortfolio }: Props) {
   const [additionalCashFixed, setAdditionalCashFixed] = useState<number>(0);
   const [targetRatios, setTargetRatios] = useState<number[]>(new Array(initialPortfolio.length).fill(0));
 
+  // debouncedSave 함수 정의
+  const debouncedSave = useMemo(() => {
+    return debounce(() => {
+      if (!initialized) return;
+      
+      saveToStorage({
+        etfList,
+        cashBalance,
+        useAdditionalCash,
+        additionalCashType,
+        additionalCashPercent,
+        additionalCashFixed,
+        targetRatios
+      });
+    }, 1000);
+  }, [initialized, etfList, cashBalance, useAdditionalCash, additionalCashType, additionalCashPercent, additionalCashFixed, targetRatios]);
+
+  // 데이터 저장을 위한 useEffect
+  useEffect(() => {
+    if (initialized) {
+      debouncedSave();
+    }
+    return () => debouncedSave.cancel();
+  }, [initialized, debouncedSave]);
+
   // 핸들러 함수들을 state 선언 다음에 배치
   const handleReset = useCallback(() => {
     if (window.confirm('모든 설정을 초기화하시겠습니까?')) {
@@ -555,23 +580,6 @@ export default function Portfolio({ initialPortfolio }: Props) {
       return newList;
     });
   }, []);
-
-  // 디바운스된 저장 함수
-  const debouncedSave = useMemo(() => {
-    return debounce(() => {
-      if (!initialized) return;
-      
-      saveToStorage({
-        etfList,
-        cashBalance,
-        useAdditionalCash,
-        additionalCashType,
-        additionalCashPercent,
-        additionalCashFixed,
-        targetRatios
-      });
-    }, 1000);
-  }, [initialized, etfList, cashBalance, useAdditionalCash, additionalCashType, additionalCashPercent, additionalCashFixed, targetRatios]);
 
   // 초기화 효과
   useEffect(() => {
