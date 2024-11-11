@@ -276,71 +276,26 @@ const ETFRow = memo(function ETFRow({
   onTickerChange: (index: number, value: string) => void;
   onTickerBlur: (index: number, value: string) => void;
 }) {
-  // 로컬 상태 추가
-  const [ratioInput, setRatioInput] = useState(TARGET_RATIOS[index]?.toString() || '');
-
-  // TARGET_RATIOS가 변경될 때 로컬 상태 업데이트
-  useEffect(() => {
-    setRatioInput(TARGET_RATIOS[index]?.toString() || '');
-  }, [TARGET_RATIOS, index]);
-
-  const handleTickerChange = useCallback((value: string) => {
-    onTickerChange(index, value);
-  }, [index, onTickerChange]);
-
-  const handleTickerBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    onTickerBlur(index, e.target.value);
-  }, [index, onTickerBlur]);
-
-  const handleQuantityChange = useCallback((value: string) => {
-    const newList = [...etfList];
-    newList[index].quantity = parseFormattedNumber(value);
-    setEtfList(newList);
-  }, [etfList, index, setEtfList, parseFormattedNumber]);
-
-  const handleRatioChange = useCallback((value: string) => {
-    setRatioInput(value); // 로컬 상태 업데이트
-
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      const parsedValue = parseFloat(value);
-      const newValue = isNaN(parsedValue) ? 0 : Math.min(100, Math.max(0, parsedValue));
-      
-      setTargetRatios(prev => {
-        const newRatios = [...prev];
-        newRatios[index] = newValue;
-        return newRatios;
-      });
-    }
-  }, [index, setTargetRatios]);
-
-  const handleRatioBlur = useCallback(() => {
-    const value = ratioInput;
-    if (value === '') {
-      handleRatioChange('0');
-    } else {
-      const parsedValue = parseFloat(value);
-      if (!isNaN(parsedValue)) {
-        handleRatioChange(parsedValue.toString());
-      }
-    }
-  }, [ratioInput, handleRatioChange]);
-
   return (
     <tr className="hover:bg-gray-50 transition-colors duration-150">
       <td className="px-6 py-4 whitespace-nowrap">
         <TickerInput
           ticker={trade.ticker}
-          onTickerChange={handleTickerChange}
-          onTickerBlur={handleTickerBlur}
-          className="w-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          onTickerChange={(value) => onTickerChange(index, value)}
+          onTickerBlur={(e) => onTickerBlur(index, e.target.value)}
+          className="w-32 mr-4"
         />
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right">
         <input
           type="text"
           className="w-24 text-right border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={formatNumber(trade.currentQuantity)}
-          onChange={(e) => handleQuantityChange(e.target.value)}
+          value={trade.currentQuantity > 0 ? formatNumber(trade.currentQuantity) : ''}
+          onChange={(e) => {
+            const newList = [...etfList];
+            newList[index].quantity = parseFormattedNumber(e.target.value);
+            setEtfList(newList);
+          }}
           placeholder="수량"
         />
       </td>
@@ -354,14 +309,21 @@ const ETFRow = memo(function ETFRow({
         {trade.currentWeight.toFixed(1)}%
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right">
-        <input
-          type="text"
-          className="w-24 text-right border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          value={ratioInput}
-          onChange={(e) => handleRatioChange(e.target.value)}
-          onBlur={handleRatioBlur}
-          placeholder="비중"
-        />
+        <div className="flex items-center justify-end">
+          <input
+            type="text"
+            className="w-24 text-right border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={TARGET_RATIOS[index] || ''}
+            onChange={(e) => {
+              const newRatios = [...TARGET_RATIOS];
+              const value = parseFloat(e.target.value);
+              newRatios[index] = isNaN(value) ? 0 : value;
+              setTargetRatios(newRatios);
+            }}
+            placeholder="0"
+          />
+          <span className="ml-2 text-gray-600">%</span>
+        </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right">
         <span className={`font-medium ${
