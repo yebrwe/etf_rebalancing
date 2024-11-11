@@ -17,6 +17,9 @@ export const metadata: Metadata = {
     title: 'ETF 포트폴리오 리밸런싱 계산기',
     description: '미국 ETF 포트폴리오 리밸런싱을 쉽게 계산해보세요.',
     images: ['/og-image.png'],
+  },
+  other: {
+    'google-adsense-account': 'ca-pub-4111350052400529'
   }
 };
 
