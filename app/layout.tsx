@@ -10,13 +10,37 @@ import ScrollToTop from '@/components/ScrollToTop';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://etf-rebalancing.com'),
   title: 'ETF 포트폴리오 리밸런싱 계산기 | 무료 ETF 자산배분 도구',
   description: '미국 ETF 포트폴리오 리밸런싱을 쉽게 계산해보세요. SCHD, QQQ, TQQQ 등 인기 ETF 실시간 가격 기반 자산배분 계산기',
   keywords: 'ETF 리밸런싱, 포트폴리오 계산기, SCHD, QQQ, TQQQ, 자산배분, 미국ETF',
   openGraph: {
+    type: 'website',
+    locale: 'ko_KR',
+    url: 'https://etf-rebalancing.com',
     title: 'ETF 포트폴리오 리밸런싱 계산기',
     description: '미국 ETF 포트폴리오 리밸런싱을 쉽게 계산해보세요.',
-    images: ['/og-image.png'],
+    siteName: 'ETF 리밸런싱 계산기',
+    images: [{
+      url: 'https://etf-rebalancing.com/og-image.png',
+      width: 1200,
+      height: 630,
+      alt: 'ETF 리밸런싱 계산기'
+    }],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+  verification: {
+    google: 'google-site-verification=MMVpVpkE19QLCYuUdb8nJFanMc_wocirgio_xJyqSBY',
+  },
+  alternates: {
+    canonical: 'https://etf-rebalancing.com'
   },
   other: {
     'google-adsense-account': 'ca-pub-4111350052400529'
